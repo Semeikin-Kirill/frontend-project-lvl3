@@ -1,18 +1,12 @@
 import onChange from 'on-change';
 
-const feedbackText = {
-  notOneOf: 'RSS уже существует',
-  url: 'Ссылка должна быть валидным URL',
-  success: 'RSS успешно загружен',
-};
-
-const render = (state, elements) => {
+const render = (state, elements, i18n) => {
   const { processState, error } = state.form;
   const { form, input, feedback } = elements;
   switch (processState) {
     case 'failed': {
       input.classList.add('is-invalid');
-      feedback.textContent = feedbackText[error];
+      feedback.textContent = i18n.t(`error.${error}`);
       feedback.classList.remove('text-success');
       feedback.classList.add('text-danger');
       return;
@@ -23,7 +17,7 @@ const render = (state, elements) => {
       input.classList.remove('is-invalid');
       feedback.classList.remove('text-danger');
       feedback.classList.add('text-success');
-      feedback.textContent = feedbackText.success;
+      feedback.textContent = i18n.t('success');
       return;
     }
     default: {
@@ -32,8 +26,8 @@ const render = (state, elements) => {
   }
 };
 
-export default (state, elements) => onChange(state, (path) => {
+export default (state, elements, i18n) => onChange(state, (path) => {
   if (path === 'form.processState' || path === 'form.error') {
-    render(state, elements);
+    render(state, elements, i18n);
   }
 });
