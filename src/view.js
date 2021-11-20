@@ -1,9 +1,17 @@
 import onChange from 'on-change';
+import renderPosts from './posts';
+import renderFeeds from './feeds';
 
 const render = (state, elements, i18n) => {
   const { processState, error } = state.form;
-  const { form, input, feedback } = elements;
+  const { posts, feeds } = state;
+  const {
+    form, input, feedback, elPosts, elFeeds,
+  } = elements;
   switch (processState) {
+    case 'filling': {
+      return;
+    }
     case 'failed': {
       input.classList.add('is-invalid');
       feedback.textContent = i18n.t(`error.${error}`);
@@ -11,13 +19,15 @@ const render = (state, elements, i18n) => {
       feedback.classList.add('text-danger');
       return;
     }
-    case 'valid': {
+    case 'success': {
       form.reset();
       input.focus();
       input.classList.remove('is-invalid');
       feedback.classList.remove('text-danger');
       feedback.classList.add('text-success');
       feedback.textContent = i18n.t('success');
+      renderPosts(elPosts, posts, i18n);
+      renderFeeds(elFeeds, feeds, i18n);
       return;
     }
     default: {
@@ -27,7 +37,7 @@ const render = (state, elements, i18n) => {
 };
 
 export default (state, elements, i18n) => onChange(state, (path) => {
-  if (path === 'form.processState' || path === 'form.error') {
+  if (path === 'form.processState') {
     render(state, elements, i18n);
   }
 });
