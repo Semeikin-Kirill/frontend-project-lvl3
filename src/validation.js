@@ -10,7 +10,8 @@ setLocale({
   },
 });
 
-export default (url, listUrl) => {
+export default (url, listRSS) => {
+  const listUrl = listRSS.map((rss) => rss.url);
   const schema = yup.string().url().notOneOf(listUrl);
   return schema.validate(url);
 };

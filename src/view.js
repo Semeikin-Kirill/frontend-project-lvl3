@@ -30,6 +30,10 @@ const render = (state, elements, i18n) => {
       renderFeeds(elFeeds, feeds, i18n);
       return;
     }
+    case 'update': {
+      renderPosts(elPosts, posts, i18n);
+      return;
+    }
     default: {
       throw new Error(`Inexistent status: ${processState}`);
     }

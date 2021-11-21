@@ -1,11 +1,12 @@
 import i18next from 'i18next';
 import axios from 'axios';
-import { uniqueId } from 'lodash';
 import watchedState from './view';
 import validate from './validation';
 import ru from './locales/ru';
 import getAllOrigins from './allOrigins';
 import parser from './parser';
+import { getFeed, getPosts } from './getData';
+import update from './update';
 
 export default () => {
   const elements = {
@@ -32,7 +33,7 @@ export default () => {
             processState: 'filling',
             error: null,
           },
-          listUrl: [],
+          listRSS: [],
           posts: [],
           feeds: [],
         },
@@ -44,31 +45,16 @@ export default () => {
         e.preventDefault();
         const formData = new FormData(e.target);
         const url = formData.get('url');
-        validate(url, state.listUrl)
+        validate(url, state.listRSS)
           .then(getAllOrigins)
           .then(axios.get)
           .then(parser)
           .then((dom) => {
-            const feedTitle = dom.querySelector('title').textContent;
-            const feedDescription = dom.querySelector('description').textContent;
-            const feedId = uniqueId();
-            const feed = {
-              description: feedDescription,
-              title: feedTitle,
-              id: feedId,
-            };
-            const items = dom.querySelectorAll('item');
-            const posts = Array.from(items).map((item) => {
-              const description = item.querySelector('title').textContent;
-              const link = item.querySelector('link').textContent;
-              return {
-                description,
-                link,
-                feedId,
-                id: uniqueId(),
-              };
-            });
-            state.listUrl = [url, ...state.listUrl];
+            const pubDate = dom.querySelector('pubDate').textContent;
+            const feed = getFeed(dom);
+            const feedId = feed.id;
+            const posts = getPosts(dom, feedId);
+            state.listRSS = [{ url, pubDate, feedId }, ...state.listRSS];
             state.feeds = [feed, ...state.feeds];
             state.posts = [...posts, ...state.posts];
             state.form.processState = 'success';
@@ -84,5 +70,6 @@ export default () => {
         state.form.processState = 'filling';
         state.form.error = null;
       });
+      setTimeout(update, 5000, state);
     });
 };
