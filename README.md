@@ -6,4 +6,4 @@
 
 ### RSS aggregator
 
-https://frontend-project-lvl3-715x5kri6-semeikin-kirill.vercel.app/
+http://frontend-project-lvl3-delta-gray.vercel.app/
