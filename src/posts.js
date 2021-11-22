@@ -1,4 +1,4 @@
-export default (posts, statePosts, i18n) => {
+export default (posts, statePosts, i18n, uiModal) => {
   const elPosts = posts;
   elPosts.innerHTML = '';
   const card = document.createElement('div');
@@ -14,7 +14,9 @@ export default (posts, statePosts, i18n) => {
   const ul = document.createElement('ul');
   ul.classList.add('list-group', 'border-0', 'rounded-0');
 
-  const list = statePosts.map(({ link, description, id }) => {
+  const list = statePosts.map(({ link, title, id }) => {
+    const { visibility } = uiModal[id];
+    const className = visibility === 'unvisited' ? 'fw-bold' : 'fw-normal';
     const li = document.createElement('li');
     li.classList.add(
       'list-group-item',
@@ -25,12 +27,12 @@ export default (posts, statePosts, i18n) => {
       'align-items-start',
     );
     const a = document.createElement('a');
-    a.classList.add('fw-bold');
+    a.classList.add(className);
     a.setAttribute('href', link);
     a.setAttribute('data-id', id);
     a.setAttribute('target', '_blank');
     a.setAttribute('rel', 'noopener noreferrer');
-    a.textContent = description;
+    a.textContent = title;
     const button = document.createElement('button');
     button.classList.add('btn', 'btn-outline-primary', 'btn-sm');
     button.setAttribute('type', 'button');

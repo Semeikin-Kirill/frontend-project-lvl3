@@ -4,7 +4,11 @@ import renderFeeds from './feeds';
 
 const render = (state, elements, i18n) => {
   const { processState, error } = state.form;
-  const { posts, feeds } = state;
+  const {
+    posts,
+    feeds,
+    uiState: { modal },
+  } = state;
   const {
     form, input, feedback, elPosts, elFeeds,
   } = elements;
@@ -26,12 +30,12 @@ const render = (state, elements, i18n) => {
       feedback.classList.remove('text-danger');
       feedback.classList.add('text-success');
       feedback.textContent = i18n.t('success');
-      renderPosts(elPosts, posts, i18n);
+      renderPosts(elPosts, posts, i18n, modal);
       renderFeeds(elFeeds, feeds, i18n);
       return;
     }
     case 'update': {
-      renderPosts(elPosts, posts, i18n);
+      renderPosts(elPosts, posts, i18n, modal);
       return;
     }
     default: {

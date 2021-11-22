@@ -15,6 +15,7 @@ export default () => {
     feedback: document.querySelector('.feedback'),
     elPosts: document.querySelector('.posts'),
     elFeeds: document.querySelector('.feeds'),
+    modal: document.querySelector('#modal'),
   };
 
   const i18nInstance = i18next.createInstance();
@@ -36,6 +37,9 @@ export default () => {
           listRSS: [],
           posts: [],
           feeds: [],
+          uiState: {
+            modal: {},
+          },
         },
         elements,
         i18nInstance,
@@ -54,13 +58,15 @@ export default () => {
             const feed = getFeed(dom);
             const feedId = feed.id;
             const posts = getPosts(dom, feedId);
+            const [dataPosts, uiPosts] = posts;
             state.listRSS = [{ url, pubDate, feedId }, ...state.listRSS];
             state.feeds = [feed, ...state.feeds];
-            state.posts = [...posts, ...state.posts];
+            state.posts = [...dataPosts, ...state.posts];
+            state.uiState.modal = { ...state.uiState.modal, ...uiPosts };
             state.form.processState = 'success';
           })
           .catch((err) => {
-            if (err.message === 'netWork Error') {
+            if (err.message === 'Network Error') {
               state.form.error = 'netWork';
             } else {
               state.form.error = err.errors?.toString() ?? err.message;
@@ -69,6 +75,22 @@ export default () => {
           });
         state.form.processState = 'filling';
         state.form.error = null;
+      });
+      elements.modal.addEventListener('show.bs.modal', (e) => {
+        const button = e.relatedTarget;
+        const id = button.getAttribute('data-id');
+        const { description, title, link } = state.uiState.modal[id];
+        const header = elements.modal.querySelector('.modal-title');
+        const body = elements.modal.querySelector('.modal-body');
+        const a = elements.modal.querySelector(
+          'a.btn.btn-primary.full-article',
+        );
+        header.textContent = title;
+        body.textContent = description;
+        a.setAttribute('href', link);
+        state.uiState.modal[id].visibility = 'visited';
+        state.form.processState = 'update';
+        state.form.processState = 'filling';
       });
       setTimeout(update, 5000, state);
     });
