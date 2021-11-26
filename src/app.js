@@ -1,12 +1,59 @@
 import i18next from 'i18next';
 import axios from 'axios';
+import * as yup from 'yup';
+import { setLocale } from 'yup';
 import watchedState from './view';
-import validate from './validation';
 import ru from './locales/ru';
-import getAllOrigins from './allOrigins';
 import parser from './parser';
-import { getFeed, getPosts } from './getData';
-import update from './update';
+
+setLocale({
+  string: {
+    url: 'wrongUrl',
+  },
+  mixed: {
+    notOneOf: 'duplicate',
+  },
+});
+
+const validate = (url, listRSS) => {
+  const listUrl = listRSS.map((rss) => rss.url);
+  const schema = yup.string().url().notOneOf(listUrl);
+  return schema.validate(url);
+};
+
+const useAllOrigins = (url) => {
+  const urlOrigins = new URL(
+    'https://hexlet-allorigins.herokuapp.com/get?disableCache=true',
+  );
+  urlOrigins.searchParams.set('url', url);
+  return urlOrigins;
+};
+
+const update = (appState) => {
+  const state = appState;
+  const promises = state.listRSS.map((item) => {
+    const rss = item;
+    const urlOrig = useAllOrigins(rss.url);
+    const date = new Date(rss.pubDate);
+    const time = date.getTime();
+    return axios
+      .get(urlOrig)
+      .then((data) => {
+        const { pubDate: newPubDate, dataPosts, uiPosts } = parser(data);
+        const newDate = new Date(newPubDate);
+        const newTime = newDate.getTime(newDate);
+        if (time === newTime) {
+          return null;
+        }
+        rss.pubDate = newPubDate;
+        state.uiState.modal = { ...state.uiState.modal, ...uiPosts };
+        state.posts = [...dataPosts, ...state.posts];
+        return null;
+      })
+      .catch(() => null);
+  });
+  Promise.all(promises).then(() => setTimeout(update, 5000, state));
+};
 
 export default () => {
   const elements = {
@@ -16,6 +63,7 @@ export default () => {
     elPosts: document.querySelector('.posts'),
     elFeeds: document.querySelector('.feeds'),
     modal: document.querySelector('#modal'),
+    submitButton: document.querySelector('button[type="submit"]'),
   };
 
   const i18nInstance = i18next.createInstance();
@@ -38,7 +86,9 @@ export default () => {
           posts: [],
           feeds: [],
           uiState: {
-            modal: {},
+            modal: {
+              current: null,
+            },
           },
         },
         elements,
@@ -47,50 +97,39 @@ export default () => {
 
       elements.form.addEventListener('submit', (e) => {
         e.preventDefault();
+        elements.submitButton.disabled = true;
         const formData = new FormData(e.target);
         const url = formData.get('url');
         validate(url, state.listRSS)
-          .then(getAllOrigins)
-          .then(axios.get)
-          .then(parser)
-          .then((dom) => {
-            const pubDate = dom.querySelector('pubDate').textContent;
-            const feed = getFeed(dom);
+          .then((result) => axios.get(useAllOrigins(result)))
+          .then((data) => {
+            const {
+              feed, dataPosts, uiPosts, pubDate,
+            } = parser(data);
             const feedId = feed.id;
-            const posts = getPosts(dom, feedId);
-            const [dataPosts, uiPosts] = posts;
+            state.uiState.modal = { ...state.uiState.modal, ...uiPosts };
             state.listRSS = [{ url, pubDate, feedId }, ...state.listRSS];
             state.feeds = [feed, ...state.feeds];
             state.posts = [...dataPosts, ...state.posts];
-            state.uiState.modal = { ...state.uiState.modal, ...uiPosts };
+            state.form.error = null;
             state.form.processState = 'success';
+            elements.submitButton.disabled = false;
           })
           .catch((err) => {
+            state.form.processState = 'failed';
             if (err.message === 'Network Error') {
               state.form.error = 'netWork';
             } else {
               state.form.error = err.errors?.toString() ?? err.message;
             }
-            state.form.processState = 'failed';
+            elements.submitButton.disabled = false;
           });
-        state.form.processState = 'filling';
-        state.form.error = null;
       });
       elements.modal.addEventListener('show.bs.modal', (e) => {
         const button = e.relatedTarget;
         const id = button.getAttribute('data-id');
-        const { description, title, link } = state.uiState.modal[id];
-        const header = elements.modal.querySelector('.modal-title');
-        const body = elements.modal.querySelector('.modal-body');
-        const a = elements.modal.querySelector(
-          'a.btn.btn-primary.full-article',
-        );
-        header.textContent = title;
-        body.textContent = description;
-        a.setAttribute('href', link);
         state.uiState.modal[id].visibility = 'visited';
-        state.form.processState = 'update';
-        state.form.processState = 'filling';
+        state.uiState.modal.current = id;
       });
       setTimeout(update, 5000, state);
     });
