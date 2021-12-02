@@ -87,22 +87,41 @@ const renderFeeds = (feeds, stateFeeds, i18n) => {
 
 const render = (state, elements, i18n) => {
   const { processState, error } = state.form;
-  const { form, input, feedback } = elements;
+  const {
+    form, input, feedback, submitButton,
+  } = elements;
   switch (processState) {
     case 'failed': {
+      feedback.textContent = i18n.t(`error.${error}`);
+      feedback.classList.remove('text-success');
+      feedback.classList.add('text-danger');
+      submitButton.disabled = false;
+      input.removeAttribute('readonly');
+      return;
+    }
+    case 'invalid': {
       input.classList.add('is-invalid');
       feedback.textContent = i18n.t(`error.${error}`);
       feedback.classList.remove('text-success');
       feedback.classList.add('text-danger');
+      submitButton.disabled = false;
+      input.removeAttribute('readonly');
+      return;
+    }
+    case 'addition': {
+      input.classList.remove('is-invalid');
+      submitButton.disabled = true;
+      input.setAttribute('readonly', '');
       return;
     }
     case 'success': {
       form.reset();
       input.focus();
-      input.classList.remove('is-invalid');
       feedback.classList.remove('text-danger');
       feedback.classList.add('text-success');
       feedback.textContent = i18n.t('success');
+      submitButton.disabled = false;
+      input.removeAttribute('readonly');
       return;
     }
     default: {
@@ -124,8 +143,7 @@ const renderModal = (id, { modal }, elements) => {
 export default (state, elements, i18n) => onChange(state, (path, value) => {
   const { elFeeds, elPosts } = elements;
   switch (path) {
-    case 'form.processState':
-    case 'form.error': {
+    case 'form.processState': {
       render(state, elements, i18n);
       break;
     }

@@ -1,55 +1,29 @@
-import { uniqueId } from 'lodash';
+const getFeed = (dom) => ({
+  description: dom.querySelector('description').textContent,
+  title: dom.querySelector('title').textContent,
+});
 
-const getFeed = (dom) => {
-  const feedTitle = dom.querySelector('title').textContent;
-  const feedDescription = dom.querySelector('description').textContent;
-  return {
-    description: feedDescription,
-    title: feedTitle,
-    id: uniqueId(),
-  };
-};
-
-const getPosts = (dom, feedId) => {
+const getPosts = (dom) => {
   const items = dom.querySelectorAll('item');
-  const posts = Array.from(items).map((item) => {
-    const title = item.querySelector('title').textContent;
-    const description = item.querySelector('description').textContent;
-    const link = item.querySelector('link').textContent;
-    const id = uniqueId();
-    return [
-      {
-        title,
-        feedId,
-        link,
-        id,
-      },
-      {
-        [id]: {
-          title,
-          description,
-          link,
-          visibility: 'unvisited',
-        },
-      },
-    ];
-  });
-  const dataPosts = posts.map(([data]) => data);
-  const uiPosts = posts.reduce((acc, [, ui]) => ({ ...acc, ...ui }), {});
-  return [dataPosts, uiPosts];
+  return Array.from(items).map((item) => ({
+    title: item.querySelector('title').textContent,
+    description: item.querySelector('description').textContent,
+    link: item.querySelector('link').textContent,
+  }));
 };
 
-export default (responce) => {
-  const data = responce.data.contents;
+export default (contents) => {
   const parser = new DOMParser();
-  const dom = parser.parseFromString(data, 'application/xml');
+  const dom = parser.parseFromString(contents, 'application/xml');
   if (dom.querySelector('parsererror')) {
-    throw new Error('notRSS');
+    throw new Error(`notRSS: ${dom.querySelector('parsererror').textContent}`);
   }
   const pubDate = dom.querySelector('pubDate').textContent;
   const feed = getFeed(dom);
-  const [dataPosts, uiPosts] = getPosts(dom, feed.id);
+  const posts = getPosts(dom);
   return {
-    feed, dataPosts, uiPosts, pubDate,
+    feed,
+    posts,
+    pubDate,
   };
 };
