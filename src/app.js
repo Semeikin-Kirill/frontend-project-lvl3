@@ -2,7 +2,7 @@ import i18next from 'i18next';
 import axios from 'axios';
 import * as yup from 'yup';
 import { setLocale } from 'yup';
-import { uniqueId } from 'lodash';
+import { uniqueId, differenceWith, isEqual } from 'lodash';
 import watchedState from './view';
 import ru from './locales/ru';
 import parser from './parser';
@@ -60,23 +60,19 @@ const update = (appState) => {
   const state = appState;
   const promises = state.listRSS.map((item) => {
     const rss = item;
-    const { url, feedId, pubDate } = rss;
-    const urlOrig = useAllOrigins(url);
-    const date = new Date(pubDate);
-    const time = date.getTime();
+    const { url, feedId } = rss;
     return axios
-      .get(urlOrig)
+      .get(useAllOrigins(url))
       .then((responce) => {
-        const { pubDate: newPubDate, posts } = parser(responce.data.contents);
+        const { posts } = parser(responce.data.contents);
         const { dataPosts, uiPosts } = getDataPosts(posts, feedId);
-        const newDate = new Date(newPubDate);
-        const newTime = newDate.getTime(newDate);
-        if (time === newTime) {
-          return null;
-        }
-        rss.pubDate = newPubDate;
+        const newPosts = differenceWith(
+          dataPosts,
+          state.posts,
+          ({ title: newTitle }, { title }) => isEqual(newTitle, title),
+        );
         state.uiState.modal = { ...state.uiState.modal, ...uiPosts };
-        state.posts = [...dataPosts, ...state.posts];
+        state.posts = [...newPosts, ...state.posts];
         return null;
       })
       .catch(() => null);
@@ -132,29 +128,27 @@ export default () => {
         validate(url, state.listRSS)
           .then((result) => axios.get(useAllOrigins(result)))
           .then((responce) => {
-            const { feed, posts, pubDate } = parser(responce.data.contents);
+            const { feed, posts } = parser(responce.data.contents);
             feed.id = uniqueId();
             const { dataPosts, uiPosts } = getDataPosts(posts, feed.id);
             state.uiState.modal = { ...state.uiState.modal, ...uiPosts };
-            state.listRSS = [
-              { url, pubDate, feedId: feed.id },
-              ...state.listRSS,
-            ];
+            state.listRSS = [{ url, feedId: feed.id }, ...state.listRSS];
             state.feeds = [feed, ...state.feeds];
             state.posts = [...dataPosts, ...state.posts];
             state.form.error = null;
             state.form.processState = 'success';
           })
           .catch((err) => {
-            if (err.message === 'Network Error') {
+            if (err.isAxiosError) {
               state.form.error = 'netWork';
               state.form.processState = 'failed';
+              return;
             }
-            if (err.message.startsWith('notRSS')) {
+            if (err.isParseError) {
               state.form.error = 'notRSS';
               state.form.processState = 'failed';
             } else {
-              state.form.error = err.errors?.toString() ?? err.message;
+              state.form.error = err.errors.toString();
               state.form.processState = 'invalid';
             }
           });

@@ -16,14 +16,16 @@ export default (contents) => {
   const parser = new DOMParser();
   const dom = parser.parseFromString(contents, 'application/xml');
   if (dom.querySelector('parsererror')) {
-    throw new Error(`notRSS: ${dom.querySelector('parsererror').textContent}`);
+    const error = new Error(
+      `notRSS: ${dom.querySelector('parsererror').textContent}`,
+    );
+    error.isParseError = true;
+    throw error;
   }
-  const pubDate = dom.querySelector('pubDate').textContent;
   const feed = getFeed(dom);
   const posts = getPosts(dom);
   return {
     feed,
     posts,
-    pubDate,
   };
 };
