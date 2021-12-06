@@ -153,11 +153,12 @@ export default () => {
             }
           });
       });
-      elements.modal.addEventListener('show.bs.modal', (e) => {
-        const button = e.relatedTarget;
-        const id = button.getAttribute('data-id');
-        state.uiState.modal[id].visibility = 'visited';
-        state.uiState.modal.current = id;
+      elements.elPosts.addEventListener('click', (e) => {
+        if (e.target.dataset.id) {
+          const { id } = e.target.dataset;
+          state.uiState.modal[id].visibility = 'visited';
+          state.uiState.modal.current = id;
+        }
       });
       setTimeout(update, 5000, state);
     });
